@@ -1,6 +1,5 @@
-
 {
-  "name": "react-native-qr-generator",
+  "name": "rn-qr-generator",
   "version": "1.0.0",
   "description": "React native QR Code generator",
   "main": "index.js",
@@ -20,5 +19,12 @@
   "license": "MIT",
   "peerDependencies": {
     "react-native": "^0.41.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gevorg94/rn-qr-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gevorg94/rn-qr-generator/issues"
   }
 }
