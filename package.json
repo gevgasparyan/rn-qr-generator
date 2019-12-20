@@ -12,7 +12,8 @@
     "qr",
     "qrcode",
     "qr generator",
-    "qrcode image"
+    "qrcode image",
+    "react-native qrcode generator"
   ],
   "author": "Gevorg Gasparyan <gevorg994@gmail.com>",
   "homepage": "https://github.com/gevorg94/rn-qr-generator#readme",
