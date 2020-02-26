@@ -63,4 +63,17 @@ RNQRGenerator.generate({
   })
   .catch(error => console.log('Cannot create QR code', error));
 ```
-  
+
+Example of 2FA QR code with Time Based (TOTP) or Counter Based (HOTP)
+
+```
+RNQRGenerator.generate({
+  ...
+  value: 'otpauth://totp/Example:google@google.com?secret=HKSWY3RNEHPK3PXP&issuer=Issuer',
+})
+```
+
+More information about totp can be found [here](https://github.com/google/google-authenticator/wiki/Key-Uri-Format).
+
+# Note
+Some simulators may not generate qr code properly. Use real device if you get an error.
