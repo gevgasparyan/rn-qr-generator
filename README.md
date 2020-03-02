@@ -50,7 +50,7 @@ ___
 import RNQRGenerator from 'rn-qr-generator';
 
 RNQRGenerator.generate({
-  value: 'https://github.com/gevorg94/rn-qr-generator', // required
+  value: 'https://github.com/gevgasparyan/rn-qr-generator', // required
   height: 100,
   width: 100,
   base64: false,            // default 'false'
