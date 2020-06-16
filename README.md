@@ -1,6 +1,8 @@
 
 # rn-qr-generator
 
+https://www.npmjs.com/package/rn-qr-generator
+
 ## Getting started
 
 `$ npm install rn-qr-generator --save`
@@ -50,7 +52,7 @@ ___
 import RNQRGenerator from 'rn-qr-generator';
 
 RNQRGenerator.generate({
-  value: 'https://github.com/gevorg94/rn-qr-generator', // required
+  value: 'https://github.com/gevgasparyan/rn-qr-generator', // required
   height: 100,
   width: 100,
   base64: false,            // default 'false'

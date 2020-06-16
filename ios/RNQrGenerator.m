@@ -52,7 +52,11 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
       scaleX = width / qrImage.extent.size.width;
     }
     qrImage = [qrImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
-    UIImage *image = [UIImage imageWithCIImage:qrImage];
+
+    CIContext *context = [CIContext contextWithOptions:nil];
+    CGImageRef cgImage = [context createCGImage:qrImage fromRect:[qrImage extent]];
+    UIImage *image = [UIImage imageWithCGImage:cgImage];
+
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
     NSData *qrData = UIImagePNGRepresentation(image);
 
