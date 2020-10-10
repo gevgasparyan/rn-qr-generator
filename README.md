@@ -75,6 +75,9 @@ RNQRGenerator.generate({
 })
 ```
 
+![example](https://user-images.githubusercontent.com/13519034/95658232-daf53600-0b29-11eb-9890-be4a8e2d06a2.gif)
+
+
 More information about totp can be found [here](https://github.com/google/google-authenticator/wiki/Key-Uri-Format).
 
 # Note
