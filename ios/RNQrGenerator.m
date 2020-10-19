@@ -80,11 +80,79 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
   }
 }
 
+RCT_EXPORT_METHOD(detect:(NSDictionary *)options
+                  failureCallback:(RCTResponseErrorBlock)failureCallback
+                  successCallback:(RCTResponseSenderBlock)successCallback)
+{
+    NSString *uri = [RCTConvert NSString:options[@"uri"]];
+    UIImage *image = [self imageFromPath:uri];
+    if (!image) {
+        NSString *base64 = [RCTConvert NSString:options[@"base64"]];
+        image = [self imageFromBase64:base64];
+    }
+
+  if (!image) {
+      NSString *errorMessage = @"QRCode uri or base64 are missing";
+      NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
+      NSError *error = [NSError errorWithDomain:@"com.rnqrcode" code:1 userInfo:userInfo];
+      failureCallback(error);
+      RCTLogWarn(@"key 'uri' or 'base64' are missing in options");
+      return;
+  }
+    CIImage* ciImage = [[CIImage alloc] initWithImage:image];
+
+    NSMutableDictionary* detectorOptions;
+    detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyHigh;
+//    detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyLow;  // Fast but superficial
+
+  if (@available(iOS 8.0, *)) {
+      CIDetector* qrDetector = [CIDetector detectorOfType:CIDetectorTypeQRCode
+                                                  context:NULL
+                                                  options:options];
+      if ([[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation] == nil) {
+          detectorOptions[CIDetectorImageOrientation] = @1;
+      } else {
+          id orientation = [[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation];
+          detectorOptions[CIDetectorImageOrientation] = orientation;
+      }
+
+      NSArray * features = [qrDetector featuresInImage:ciImage
+                                    options:detectorOptions];
+      NSMutableArray *rawValues = [NSMutableArray array];
+      [features enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+          [rawValues addObject: [obj messageString]];
+      }];
+      NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
+      response[@"values"] = rawValues;
+      successCallback(@[response]);
+
+  } else {
+      NSString *errorMessage = @"QRCode iOS 8+ required";
+      NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
+      NSError *error = [NSError errorWithDomain:@"com.rnqrcode" code:1 userInfo:userInfo];
+      failureCallback(error);
+      RCTLogWarn(@"Required iOS 8 or later");
+  }
+}
+
 - (NSString *)generatePathInDirectory:(NSString *)directory withExtension:(NSString *)extension
 {
     NSString *fileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:extension];
     [self ensureDirExistsWithPath:directory];
     return [directory stringByAppendingPathComponent:fileName];
+}
+
+- (UIImage *)imageFromPath:(NSString *)path
+{
+    NSURL *imageURL = [NSURL URLWithString:path];
+    NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+    return [UIImage imageWithData:imageData];
+}
+
+- (UIImage *)imageFromBase64:(NSString *)base64String
+{
+    NSData *imageData = [[NSData alloc]initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
+    return [UIImage imageWithData:imageData];
 }
 
 - (BOOL)ensureDirExistsWithPath:(NSString *)path

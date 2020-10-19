@@ -1,6 +1,6 @@
 {
   "name": "rn-qr-generator",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "React native QR Code generator",
   "main": "index.js",
   "types": "typings/index.d.ts",
@@ -13,6 +13,9 @@
     "qrcode",
     "qr generator",
     "qrcode image",
+    "qr decode",
+    "detect QR code",
+    "scan QR code",
     "react-native qrcode generator"
   ],
   "author": "Gevorg Gasparyan <gevorg994@gmail.com>",
