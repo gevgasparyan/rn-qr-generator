@@ -14,6 +14,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -118,13 +119,21 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     }
     try {
       String decoded = scanQRImage(bitmap);
-      WritableMap response = Arguments.createMap();
-      response.putString("values", decoded);
-      successCallback.invoke(response);
+      onDetectResult(decoded, successCallback);
     } catch (Exception e) {
       e.printStackTrace();
-      failureCallback.invoke("NOT_FOUND");
+      onDetectResult("", successCallback);
     }
+  }
+
+  private void onDetectResult(String result, Callback successCallback) {
+    WritableArray values = Arguments.createArray();
+    if (result != "") {
+      values.pushString(result);
+    }
+    WritableMap response = Arguments.createMap();
+    response.putArray("values", values);
+    successCallback.invoke(response);
   }
 
   public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color) throws WriterException {

@@ -1,27 +1,36 @@
 // Type definitions for rn-qr-generator 1.0
-// Project: https://github.com/gevorg94/rn-qr-generator#readme
-// Definitions by: Gevorg Gasparyan <https://github.com/gevorg94>
+// Project: https://github.com/gevgasparyan/rn-qr-generator#readme
+// Definitions by: Gevorg Gasparyan <https://github.com/gevgasparyan>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-// TypeScript Version: 2.1
 
-declare namespace RNQRGenerator {
-  function generate(options: QROptions): Promise<QRResponse>;
-}
+export interface QRCodeGenerateOptions  {
+  value: string;
+  backgroundColor?: string;
+  color?: string;
+  width?: number;
+  height?: number;
+  base64?: boolean;
+};
 
-export default Share;
-
-interface QRResponse {
+export interface QRCodeGenerateResult {
   uri: string;
   width: number;
   height: number;
-  base64?: boolean;
+  base64?: string;
+};
+
+export interface QRCodeDetectOptions {
+  uri?: string;
+  base64?: string;
+};
+
+export interface QRCodeScanResult {
+  values: Array<string>;
+};
+
+declare namespace RNQRGenerator {
+  function generate(options: QRCodeGenerateOptions): Promise<QRCodeGenerateResult>;
+  function detect(options: QRCodeDetectOptions): Promise<QRCodeScanResult>;
 }
 
-interface QROptions {
-  value: string;
-  width: number;
-  height: number;
-  base64?: boolean;
-  color?: string;
-  backgroundColor?: string;
-}
+export default RNQRGenerator;

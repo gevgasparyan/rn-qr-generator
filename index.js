@@ -11,13 +11,24 @@ export type QRCodeGenerateOptions = {
   base64?: boolean,
 };
 
+export type QRCodeGenerateResult = {
+  uri: string,
+  width: number,
+  height: number,
+  base64?: string,
+};
+
 export type QRCodeDetectOptions = {
   uri?: string,
   base64?: string,
 };
 
+export type QRCodeScanResult = {
+  values: string[],
+};
+
 export default {
-  generate: (options: QRCodeGenerateOptions) => {
+  generate: (options: QRCodeGenerateOptions): Promise<QRCodeGenerateResult> => {
     const {value, backgroundColor, color} = options;
     if (!value) {
       return Promise.reject('Property "value" is missing');
@@ -35,7 +46,7 @@ export default {
       );
     });
   },
-  detect: (options: QRCodeDetectOptions) => {
+  detect: (options: QRCodeDetectOptions): Promise<QRCodeScanResult> => {
     const {uri, base64} = options;
     if (!uri && !base64) {
       return Promise.reject('Property "uri" or "base64" are missing');

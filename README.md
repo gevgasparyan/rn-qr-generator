@@ -64,6 +64,16 @@ RNQRGenerator.generate({
     this.setState({ imageUri: uri });
   })
   .catch(error => console.log('Cannot create QR code', error));
+
+// Detect QR code in image
+RNQRGenerator.detect({
+  uri: PATH_TO_IMAGE, // local path of the image. Can be skipped if base64 is passed.
+  base64: imageBase64String, // If uri is passed this option will be skipped.
+})
+  .then(response => {
+    const { values } = response; // Array of detected QR code values. Empty if nothing found.
+  })
+  .catch(error => console.log('Cannot detect QR code in image', error));
 ```
 
 Example of 2FA QR code with Time Based (TOTP) or Counter Based (HOTP)
@@ -75,7 +85,8 @@ RNQRGenerator.generate({
 })
 ```
 
-![example](https://user-images.githubusercontent.com/13519034/95658232-daf53600-0b29-11eb-9890-be4a8e2d06a2.gif)
+![generate](https://user-images.githubusercontent.com/13519034/95658232-daf53600-0b29-11eb-9890-be4a8e2d06a2.gif)
+![detect](https://user-images.githubusercontent.com/13519034/96505601-6a57c300-1267-11eb-9a4c-89d6b8a031d5.gif)
 
 
 More information about totp can be found [here](https://github.com/google/google-authenticator/wiki/Key-Uri-Format).
