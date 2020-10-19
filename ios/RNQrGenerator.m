@@ -151,8 +151,7 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
 
 - (UIImage *)imageFromBase64:(NSString *)base64String
 {
-    NSURL *url = [NSURL URLWithString:base64String];
-    NSData *imageData = [NSData dataWithContentsOfURL:url];
+    NSData *imageData = [[NSData alloc]initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
     return [UIImage imageWithData:imageData];
 }
 
