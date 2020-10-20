@@ -18,6 +18,7 @@ export interface QRCodeGenerateOptions  {
   height?: number;
   base64?: boolean;
   padding?: Padding;
+  correctionLevel: 'L' | 'M' | 'Q' | 'H',
 };
 
 export interface QRCodeGenerateResult {

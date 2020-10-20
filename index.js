@@ -17,6 +17,7 @@ export type QRCodeGenerateOptions = {
   height?: number,
   base64?: boolean,
   padding?: Padding,
+  correctionLevel: 'L' | 'M' | 'Q' | 'H',
 };
 
 export type QRCodeGenerateResult = {
@@ -42,6 +43,7 @@ export default {
       return Promise.reject('Property "value" is missing');
     }
     const qrOptions = {
+      correctionLevel: 'H',
       ...options,
       backgroundColor: processColor(backgroundColor || 'white'),
       color: processColor(color || 'black'),

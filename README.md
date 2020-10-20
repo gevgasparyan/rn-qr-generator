@@ -63,7 +63,8 @@ RNQRGenerator.generate({
     left: 20,
     bottom: 20,
     right: 20,
-  }
+  },
+  correctionLevel: 'L',     // default is 'H', also available 'M' and 'Q'.
 })
   .then(response => {
     const { uri, width, height, base64 } = response;

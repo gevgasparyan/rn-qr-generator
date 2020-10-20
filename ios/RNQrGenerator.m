@@ -22,6 +22,8 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
 {
 
   NSString *qrData = [RCTConvert NSString:options[@"value"]];
+  NSString *level = [RCTConvert NSString:options[@"correctionLevel"]];
+  level = [self getCorrectionLevel:level];
   float width = [RCTConvert float:options[@"width"]];
   float height = [RCTConvert float:options[@"height"]];
   bool base64 = [RCTConvert BOOL:options[@"base64"]];
@@ -41,7 +43,8 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     CIFilter *qrFilter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
     CIFilter *colorFilter = [CIFilter filterWithName:@"CIFalseColor"];
     [qrFilter setValue:stringData forKey:@"inputMessage"];
-    [qrFilter setValue:@"H" forKey:@"inputCorrectionLevel"];
+      // L M Q H
+    [qrFilter setValue:level forKey:@"inputCorrectionLevel"];
 
     CIColor *background = [[CIColor alloc] initWithColor:backgroundColor];
     CIColor *foreground = [[CIColor alloc] initWithColor:color];
@@ -63,7 +66,7 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     CIContext *context = [CIContext contextWithOptions:nil];
     CGImageRef cgImage = [context createCGImage:qrImage fromRect:[qrImage extent]];
     UIImage *image = [UIImage imageWithCGImage:cgImage];
-    if (!UIEdgeInsetsEqualToEdgeInsets(insets, UIEdgeInsetsZero)) {
+    if (insets.top != 0 || insets.left != 0 || insets.bottom != 0 || insets.right != 0) {
       CGFloat width = image.size.width + insets.left + insets.right;
       CGFloat height = image.size.height + insets.top + insets.bottom;
       UIGraphicsBeginImageContextWithOptions(CGSizeMake(width, height), NO, 1.0);
@@ -197,6 +200,19 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
 {
     NSArray *array = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     return [array objectAtIndex:0];
+}
+
+- (NSString *)getCorrectionLevel:(NSString *)level
+{
+    NSString *correctionLevel = @"H";
+    if ([level isEqualToString:@"L"]) {
+        correctionLevel = @"L";
+    } else if ([correctionLevel isEqualToString:@"M"]) {
+        correctionLevel = @"M";
+    } else if ([correctionLevel isEqualToString:@"Q"]) {
+        correctionLevel = @"Q";
+    }
+    return correctionLevel;
 }
 
 - (NSString *)writeImage:(NSData *)image toPath:(NSString *)path

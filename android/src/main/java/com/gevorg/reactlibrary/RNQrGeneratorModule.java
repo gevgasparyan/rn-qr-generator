@@ -60,6 +60,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void generate(final ReadableMap options, @Nullable Callback failureCallback, @Nullable Callback successCallback) {
     String value = options.hasKey("value") ? options.getString("value") : "";
+    String correctionLevel = options.hasKey("correctionLevel") ? options.getString("correctionLevel") : "H";
     Double width = options.hasKey("width") ? options.getDouble("width") : 100;
     Double height = options.hasKey("height") ? options.getDouble("height") : 100;
     int backgroundColor = options.hasKey("backgroundColor") ? options.getInt("backgroundColor") : Color.WHITE;
@@ -75,7 +76,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     boolean base64 = options.hasKey("base64") ? options.getBoolean("base64") : false;
 
     try {
-      Bitmap bitmap = generateQrCode(value, width.intValue(), height.intValue(), backgroundColor, color);
+      Bitmap bitmap = generateQrCode(value, width.intValue(), height.intValue(), backgroundColor, color, correctionLevel);
       if (top != 0 || left != 0 || bottom != 0 || right != 0) {
         int newWidth = bitmap.getWidth() + left.intValue() + right.intValue();
         int newHeight = bitmap.getHeight() + top.intValue() + bottom.intValue();
@@ -159,7 +160,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     successCallback.invoke(response);
   }
 
-  public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color) throws WriterException {
+  public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color, String correctionLevel) throws WriterException {
     /**
      * Allow the zxing engine use the default argument for the margin variable
      */
@@ -172,7 +173,15 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     int marginSize = MARGIN_NONE;
 
     Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
-    hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M); // M = 15% damage
+    ErrorCorrectionLevel level = ErrorCorrectionLevel.H;
+    if (correctionLevel == "M") {
+      level = ErrorCorrectionLevel.M;
+    } else if (correctionLevel == "L") {
+      level = ErrorCorrectionLevel.L;
+    } else if (correctionLevel == "Q") {
+      level = ErrorCorrectionLevel.Q;
+    }
+    hints.put(EncodeHintType.ERROR_CORRECTION, level);
     if (marginSize != MARGIN_AUTOMATIC) {
       // We want to generate with a custom margin size
       hints.put(EncodeHintType.MARGIN, marginSize);
