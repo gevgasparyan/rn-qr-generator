@@ -2,6 +2,13 @@ import {NativeModules, processColor} from 'react-native';
 
 const {RNQrGenerator} = NativeModules;
 
+export type Padding = {
+  top?: number,
+  left?: number,
+  bottom?: number,
+  right?: number,
+};
+
 export type QRCodeGenerateOptions = {
   value: string,
   backgroundColor?: string,
@@ -9,6 +16,7 @@ export type QRCodeGenerateOptions = {
   width?: number,
   height?: number,
   base64?: boolean,
+  padding?: Padding,
 };
 
 export type QRCodeGenerateResult = {

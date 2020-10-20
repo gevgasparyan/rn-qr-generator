@@ -27,6 +27,14 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
   bool base64 = [RCTConvert BOOL:options[@"base64"]];
   UIColor *backgroundColor = [RCTConvert UIColor:options[@"backgroundColor"]];
   UIColor *color = [RCTConvert UIColor:options[@"color"]];
+  NSDictionary *padding = [RCTConvert NSDictionary:options[@"padding"]];
+  float top = [RCTConvert float:padding[@"top"]];
+  float left = [RCTConvert float:padding[@"left"]];
+  float bottom = [RCTConvert float:padding[@"bottom"]];
+  float right = [RCTConvert float:padding[@"right"]];
+  UIEdgeInsets insets = UIEdgeInsetsMake(top, left, bottom, right);
+  width = width - insets.left - insets.right;
+  height = height - insets.top - insets.bottom;
 
   if (qrData) {
     NSData *stringData = [qrData dataUsingEncoding: NSUTF8StringEncoding];
@@ -52,10 +60,26 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
       scaleX = width / qrImage.extent.size.width;
     }
     qrImage = [qrImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
-
     CIContext *context = [CIContext contextWithOptions:nil];
     CGImageRef cgImage = [context createCGImage:qrImage fromRect:[qrImage extent]];
     UIImage *image = [UIImage imageWithCGImage:cgImage];
+    if (!UIEdgeInsetsEqualToEdgeInsets(insets, UIEdgeInsetsZero)) {
+      CGFloat width = image.size.width + insets.left + insets.right;
+      CGFloat height = image.size.height + insets.top + insets.bottom;
+      UIGraphicsBeginImageContextWithOptions(CGSizeMake(width, height), NO, 1.0);
+      CGContextRef context = UIGraphicsGetCurrentContext();
+      CGContextSetFillColorWithColor(context, [backgroundColor CGColor]);
+      CGContextFillRect(context, CGRectMake(0, 0, width, height));
+      UIGraphicsPushContext(context);
+
+      CGPoint origin = CGPointMake(insets.left, insets.top);
+      [image drawAtPoint:origin];
+
+      UIGraphicsPopContext();
+      UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+      UIGraphicsEndImageContext();
+      image = newImage;
+    }
 
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
     NSData *qrData = UIImagePNGRepresentation(image);

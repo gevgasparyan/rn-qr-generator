@@ -58,6 +58,12 @@ RNQRGenerator.generate({
   base64: false,            // default 'false'
   backgroundColor: 'black', // default 'white'
   color: 'white',           // default 'black'
+  padding: {                // default no padding
+    top: 20,
+    left: 20,
+    bottom: 20,
+    right: 20,
+  }
 })
   .then(response => {
     const { uri, width, height, base64 } = response;
