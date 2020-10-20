@@ -4,6 +4,7 @@ package com.gevorg.reactlibrary;
 import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.net.Uri;
 import android.util.Base64;
@@ -21,13 +22,13 @@ import com.google.zxing.BinaryBitmap;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
+import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.Reader;
 import com.google.zxing.Result;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import androidx.annotation.Nullable;
@@ -37,7 +38,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Hashtable;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
@@ -62,11 +64,32 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     Double height = options.hasKey("height") ? options.getDouble("height") : 100;
     int backgroundColor = options.hasKey("backgroundColor") ? options.getInt("backgroundColor") : Color.WHITE;
     int color = options.hasKey("color") ? options.getInt("color") : Color.BLACK;
+    ReadableMap padding = options.hasKey("padding") ? options.getMap("padding") : Arguments.createMap();
 
+    Double top = padding.hasKey("top") ? padding.getDouble("top") : 0;
+    Double left = padding.hasKey("left") ? padding.getDouble("left") : 0;
+    Double bottom = padding.hasKey("bottom") ? padding.getDouble("bottom") : 0;
+    Double right = padding.hasKey("right") ? padding.getDouble("right"):  0;
+    width = width - left - right;
+    height = height - top - bottom;
     boolean base64 = options.hasKey("base64") ? options.getBoolean("base64") : false;
 
     try {
       Bitmap bitmap = generateQrCode(value, width.intValue(), height.intValue(), backgroundColor, color);
+      if (top != 0 || left != 0 || bottom != 0 || right != 0) {
+        int newWidth = bitmap.getWidth() + left.intValue() + right.intValue();
+        int newHeight = bitmap.getHeight() + top.intValue() + bottom.intValue();
+        Bitmap output = Bitmap.createBitmap(
+                newWidth,
+                newHeight,
+                Bitmap.Config.ARGB_8888
+        );
+
+        Canvas canvas = new Canvas(output);
+        canvas.drawColor(backgroundColor);
+        canvas.drawBitmap(bitmap, left.floatValue(), top.floatValue(), null);
+        bitmap = output;
+      }
 
       WritableMap response = Arguments.createMap();
       response.putDouble("width", bitmap.getWidth());
@@ -137,20 +160,40 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   }
 
   public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color) throws WriterException {
-    Hashtable<EncodeHintType, ErrorCorrectionLevel> hintMap = new Hashtable<EncodeHintType, ErrorCorrectionLevel>();
-    hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H); // H = 30% damage
+    /**
+     * Allow the zxing engine use the default argument for the margin variable
+     */
+    int MARGIN_AUTOMATIC = -1;
 
-    QRCodeWriter qrCodeWriter = new QRCodeWriter();
+    /**
+     * Set no margin to be added to the QR code by the zxing engine
+     */
+    int MARGIN_NONE = 0;
+    int marginSize = MARGIN_NONE;
 
-    BitMatrix bitMatrix = qrCodeWriter.encode(myCodeText, BarcodeFormat.QR_CODE, qrWidth, qrHeight, hintMap);
-    int width = bitMatrix.getWidth();
-    Bitmap bmp = Bitmap.createBitmap(width, width, Bitmap.Config.ARGB_8888);
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < width; y++) {
-        bmp.setPixel(y, x, bitMatrix.get(x, y) ? color : backgroundColor);
+    Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+    hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M); // M = 15% damage
+    if (marginSize != MARGIN_AUTOMATIC) {
+      // We want to generate with a custom margin size
+      hints.put(EncodeHintType.MARGIN, marginSize);
+    }
+
+    MultiFormatWriter writer = new MultiFormatWriter();
+    BitMatrix result = writer.encode(myCodeText, BarcodeFormat.QR_CODE, qrWidth, qrHeight, hints);
+
+    final int width = result.getWidth();
+    final int height = result.getHeight();
+    int[] pixels = new int[width * height];
+    for (int y = 0; y < height; y++) {
+      int offset = y * width;
+      for (int x = 0; x < width; x++) {
+        pixels[offset + x] = result.get(x, y) ? color : backgroundColor;
       }
     }
-    return bmp;
+
+    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+    return bitmap;
   }
 
   public static String scanQRImage(Bitmap bMap) throws Exception {
