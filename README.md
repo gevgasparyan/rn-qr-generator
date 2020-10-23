@@ -64,6 +64,7 @@ RNQRGenerator.generate({
     bottom: 20,
     right: 20,
   },
+  fileName: 'My Profile',   // (optional), name of the image file to store in FileSystem.
   correctionLevel: 'L',     // default is 'H', also available 'M' and 'Q'.
 })
   .then(response => {

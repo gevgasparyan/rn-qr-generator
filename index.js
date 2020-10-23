@@ -17,6 +17,7 @@ export type QRCodeGenerateOptions = {
   height?: number,
   base64?: boolean,
   padding?: Padding,
+  fileName?: string,
   correctionLevel: 'L' | 'M' | 'Q' | 'H',
 };
 

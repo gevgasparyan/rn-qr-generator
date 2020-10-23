@@ -60,6 +60,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void generate(final ReadableMap options, @Nullable Callback failureCallback, @Nullable Callback successCallback) {
     String value = options.hasKey("value") ? options.getString("value") : "";
+    String fileName = options.hasKey("fileName") ? options.getString("fileName") : null;
     String correctionLevel = options.hasKey("correctionLevel") ? options.getString("correctionLevel") : "H";
     Double width = options.hasKey("width") ? options.getDouble("width") : 100;
     Double height = options.hasKey("height") ? options.getDouble("height") : 100;
@@ -98,7 +99,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
       try {
         File cacheDirectory = this.reactContext.getCacheDir();
-        File imageFile = new File(getOutputFilePath(cacheDirectory, ".png"));
+        File imageFile = new File(getOutputFilePath(cacheDirectory, fileName, ".png"));
         imageFile.createNewFile();
         FileOutputStream fOut = new FileOutputStream(imageFile);
 
@@ -233,10 +234,10 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     return dir;
   }
 
-  public static String getOutputFilePath(File directory, String extension) throws IOException {
+  public static String getOutputFilePath(File directory, String fileName, String extension) throws IOException {
     ensureDirExists(directory);
-    String filename = UUID.randomUUID().toString();
-    return directory + File.separator + filename + extension;
+    String name = (fileName != null) ? fileName : UUID.randomUUID().toString();
+    return directory + File.separator + name + extension;
   }
 
   public Bitmap getBitmapFromSource(String path, String base64) throws IOException {

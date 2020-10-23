@@ -23,6 +23,7 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
 
   NSString *qrData = [RCTConvert NSString:options[@"value"]];
   NSString *level = [RCTConvert NSString:options[@"correctionLevel"]];
+  NSString *fileName = [RCTConvert NSString:options[@"fileName"]];
   level = [self getCorrectionLevel:level];
   float width = [RCTConvert float:options[@"width"]];
   float height = [RCTConvert float:options[@"height"]];
@@ -88,7 +89,7 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     NSData *qrData = UIImagePNGRepresentation(image);
 
     NSString *directory = [[self cacheDirectoryPath] stringByAppendingPathComponent:@"QRCode"];
-    NSString *path = [self generatePathInDirectory:directory withExtension:@".png"];
+    NSString *path = [self generatePathInDirectory:directory fileName:fileName withExtension:@".png"];
     response[@"uri"] = [self writeImage:qrData toPath:path];
 
     response[@"width"] = @(image.size.width);
@@ -162,9 +163,10 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
   }
 }
 
-- (NSString *)generatePathInDirectory:(NSString *)directory withExtension:(NSString *)extension
+- (NSString *)generatePathInDirectory:(NSString *)directory fileName:(NSString *)name withExtension:(NSString *)extension
 {
-    NSString *fileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:extension];
+    NSString *fileName = name ? name : [[NSUUID UUID] UUIDString];
+    fileName = [fileName stringByAppendingString:extension];
     [self ensureDirExistsWithPath:directory];
     return [directory stringByAppendingPathComponent:fileName];
 }
