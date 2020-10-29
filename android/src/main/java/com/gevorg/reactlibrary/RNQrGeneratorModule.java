@@ -134,7 +134,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     String base64 = options.hasKey("base64") ? options.getString("base64") : "";
 
     Bitmap bitmap = null;
-    if (path == "" && base64 != "") {
+    if (path != "" || base64 != "") {
       try {
         bitmap = getBitmapFromSource(path, base64);
       } catch (Exception e) {
