@@ -1,6 +1,14 @@
-import {NativeModules, processColor} from 'react-native';
+import {NativeModules, Platform, processColor} from 'react-native';
 
 const {RNQrGenerator} = NativeModules;
+
+if (!NativeModules.RNQrGenerator) {
+  const errorMessage =
+    Platform.OS === 'ios'
+      ? `Could not find module "RNQrGenerator".\nDid you forget to run "pod install" ?`
+      : `Could not find module "RNQrGenerator".`;
+  console.error(errorMessage);
+}
 
 export type Padding = {
   top?: number,

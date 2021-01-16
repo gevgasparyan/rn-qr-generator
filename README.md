@@ -119,8 +119,7 @@ payload
 | values         | string[]   | Array of detected QR code values. Empty if nothing found.
 
 
-![generate](https://user-images.githubusercontent.com/13519034/95658232-daf53600-0b29-11eb-9890-be4a8e2d06a2.gif)
-![detect](https://user-images.githubusercontent.com/13519034/96505601-6a57c300-1267-11eb-9a4c-89d6b8a031d5.gif)
+![example](https://user-images.githubusercontent.com/13519034/104821872-50268480-5858-11eb-9e5b-77190f9da71d.gif)
 
 
 Example of 2FA QR code with Time Based (TOTP) or Counter Based (HOTP)
