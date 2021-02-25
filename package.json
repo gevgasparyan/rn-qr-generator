@@ -8,7 +8,8 @@
     "/android",
     "!/android/build",
     "/ios",
-    "/*.podspec"
+    "/*.podspec",
+    "/typings"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
