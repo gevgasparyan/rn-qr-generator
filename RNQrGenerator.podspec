@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
 
   s.platform     = :ios, "7.0"
   s.tvos.deployment_target = '13.0'
-  s.source       = { :git => "https://github.com/gevorg94/rn-qr-generator.git", :tag => "master" }
+  s.source       = { :git => "https://github.com/gevgasparyan/rn-qr-generator.git", :tag => "master" }
   s.source_files  = "ios/**/*.{h,m}"
   s.requires_arc = true
 
