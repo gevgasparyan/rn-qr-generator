@@ -71,8 +71,9 @@ const App: () => React$Node = () => {
       setDetectImageUri({uri: response.uri});
       RNQRGenerator.detect({uri: response.uri})
         .then((res) => {
+          console.log('Detected', res);
           if (res.values.length === 0) {
-            setDetectedValues(['QR code not found']);
+            setDetectedValues(['Code not found']);
           } else {
             setDetectedValues(res.values);
           }

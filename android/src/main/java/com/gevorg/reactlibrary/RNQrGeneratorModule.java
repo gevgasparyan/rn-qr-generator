@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.net.Uri;
 import android.util.Base64;
+import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -38,7 +39,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,6 +49,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
   private final ReactApplicationContext reactContext;
   private final static String SCHEME_CONTENT = "content";
+  private final String TAG = "RNQRGenerator";
 
   public RNQrGeneratorModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -143,24 +147,68 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       }
     }
     try {
-      String decoded = scanQRImage(bitmap);
-      onDetectResult(decoded, successCallback);
+      Result result = scanQRImage(bitmap);
+      BarcodeFormat format = result.getBarcodeFormat();
+      String codeType = getCodeType(format);
+      onDetectResult(result.getText(), codeType, successCallback);
     } catch (Exception e) {
       e.printStackTrace();
-      onDetectResult("", successCallback);
+      onDetectResult("", "", successCallback);
     }
   }
 
-  private void onDetectResult(String result, Callback successCallback) {
+  private void onDetectResult(String result, String type, Callback successCallback) {
     WritableArray values = Arguments.createArray();
     if (result != "") {
       values.pushString(result);
     }
     WritableMap response = Arguments.createMap();
     response.putArray("values", values);
+    response.putString("type", type);
     successCallback.invoke(response);
   }
 
+  private String getCodeType(BarcodeFormat format) {
+
+    switch (format) {
+      case AZTEC:
+        return "Aztec";
+      case CODABAR:
+        return "Codabar";
+      case CODE_39:
+        return "Code39";
+      case CODE_93:
+        return "Code93";
+      case CODE_128:
+        return "Code128";
+      case DATA_MATRIX:
+        return "DataMatrix";
+      case EAN_8:
+        return "Ean8";
+      case EAN_13:
+        return "Ean13";
+      case ITF:
+        return "ITF";
+      case MAXICODE:
+        return "MaxiCode";
+      case PDF_417:
+        return "PDF417";
+      case QR_CODE:
+        return "QRCode";
+      case RSS_14:
+        return "RSS14";
+      case RSS_EXPANDED:
+        return "RSSExpanded";
+      case UPC_A:
+        return "UPCA";
+      case UPC_E:
+        return "UPCE";
+      case UPC_EAN_EXTENSION:
+        return "UPCEANExtension";
+      default:
+        return "";
+    }
+  }
   public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color, String correctionLevel) throws WriterException {
     /**
      * Allow the zxing engine use the default argument for the margin variable
@@ -206,9 +254,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     return bitmap;
   }
 
-  public static String scanQRImage(Bitmap bMap) throws Exception {
-    String contents = null;
-
+  public static Result scanQRImage(Bitmap bMap) throws Exception {
     int[] intArray = new int[bMap.getWidth()*bMap.getHeight()];
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
@@ -219,12 +265,11 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     Reader reader = new MultiFormatReader();
     try {
       Result result = reader.decode(bitmap);
-      contents = result.getText();
-    }
-    catch (Exception e) {
+      return result;
+    } catch (Exception e) {
+      Log.e("RNQRGenerator", "Decode Failed:", e);
       throw e;
     }
-    return contents;
   }
 
   public static File ensureDirExists(File dir) throws IOException {
