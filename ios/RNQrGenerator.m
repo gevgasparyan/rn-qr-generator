@@ -8,6 +8,8 @@
 #import "React/RCTConvert.h"   // Required when used as a Pod in a Swift project
 #endif
 
+#import <ZXingObjC/ZXingObjC.h>
+
 @implementation RNQrGenerator
 
 - (dispatch_queue_t)methodQueue
@@ -20,7 +22,6 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
                   failureCallback:(RCTResponseErrorBlock)failureCallback
                   successCallback:(RCTResponseSenderBlock)successCallback)
 {
-
   NSString *qrData = [RCTConvert NSString:options[@"value"]];
   NSString *level = [RCTConvert NSString:options[@"correctionLevel"]];
   NSString *fileName = [RCTConvert NSString:options[@"fileName"]];
@@ -127,40 +128,64 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
       RCTLogWarn(@"key 'uri' or 'base64' are missing in options");
       return;
   }
-    CIImage* ciImage = [[CIImage alloc] initWithImage:image];
+    ZXLuminanceSource *source = [[ZXCGImageLuminanceSource alloc] initWithCGImage:image.CGImage];
+    ZXBinaryBitmap *bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
 
-    NSMutableDictionary* detectorOptions;
-    detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyHigh;
-//    detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyLow;  // Fast but superficial
+    NSError *error = nil;
 
-  if (@available(iOS 8.0, *)) {
-      CIDetector* qrDetector = [CIDetector detectorOfType:CIDetectorTypeQRCode
-                                                  context:NULL
-                                                  options:options];
-      if ([[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation] == nil) {
-          detectorOptions[CIDetectorImageOrientation] = @1;
+    // There are a number of hints we can give to the reader, including
+    // possible formats, allowed lengths, and the string encoding.
+    ZXDecodeHints *hints = [ZXDecodeHints hints];
+    [hints setTryHarder:TRUE];
+
+    ZXMultiFormatReader *reader = [ZXMultiFormatReader reader];
+    ZXResult *result = [reader decode:bitmap
+                                hints:hints
+                                error:&error];
+    NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
+    if (result) {
+      // The coded result as a string. The raw data can be accessed with
+      // result.rawBytes and result.length.
+      NSString *contents = result.text;
+
+      // The barcode format, such as a QR code or UPC-A
+        ZXBarcodeFormat format = result.barcodeFormat;
+        response[@"values"] = @[contents];
+        response[@"type"] = [self getCodeType:format];
+        successCallback(@[response]);
+    } else {
+        CIImage* ciImage = [[CIImage alloc] initWithImage:image];
+        NSMutableDictionary* detectorOptions;
+        detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyHigh;
+      if (@available(iOS 8.0, *)) {
+          CIDetector* qrDetector = [CIDetector detectorOfType:CIDetectorTypeQRCode
+                                                      context:NULL
+                                                      options:options];
+          if ([[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation] == nil) {
+              detectorOptions[CIDetectorImageOrientation] = @1;
+          } else {
+              id orientation = [[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation];
+              detectorOptions[CIDetectorImageOrientation] = orientation;
+          }
+
+          NSArray * features = [qrDetector featuresInImage:ciImage
+                                        options:detectorOptions];
+          NSMutableArray *rawValues = [NSMutableArray array];
+          [features enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+              [rawValues addObject: [obj messageString]];
+          }];
+          NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
+          response[@"values"] = rawValues;
+          response[@"type"] = @"QRCode";
+          successCallback(@[response]);
       } else {
-          id orientation = [[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation];
-          detectorOptions[CIDetectorImageOrientation] = orientation;
+          NSString *errorMessage = @"QRCode iOS 8+ required";
+          NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
+          NSError *error = [NSError errorWithDomain:@"com.rnqrcode" code:1 userInfo:userInfo];
+          failureCallback(error);
+          RCTLogWarn(@"Required iOS 8 or later");
       }
-
-      NSArray * features = [qrDetector featuresInImage:ciImage
-                                    options:detectorOptions];
-      NSMutableArray *rawValues = [NSMutableArray array];
-      [features enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-          [rawValues addObject: [obj messageString]];
-      }];
-      NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
-      response[@"values"] = rawValues;
-      successCallback(@[response]);
-
-  } else {
-      NSString *errorMessage = @"QRCode iOS 8+ required";
-      NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
-      NSError *error = [NSError errorWithDomain:@"com.rnqrcode" code:1 userInfo:userInfo];
-      failureCallback(error);
-      RCTLogWarn(@"Required iOS 8 or later");
-  }
+    }
 }
 
 - (NSString *)generatePathInDirectory:(NSString *)directory fileName:(NSString *)name withExtension:(NSString *)extension
@@ -182,6 +207,47 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
 {
     NSData *imageData = [[NSData alloc]initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
     return [UIImage imageWithData:imageData];
+}
+
+- (NSString*) getCodeType:(ZXBarcodeFormat) format {
+    switch (format) {
+        case kBarcodeFormatAztec:
+            return @"Aztec";
+        case kBarcodeFormatCodabar:
+            return @"Codabar";
+        case kBarcodeFormatCode39:
+            return @"Code39";
+        case kBarcodeFormatCode93:
+            return @"Code93";
+        case kBarcodeFormatCode128:
+            return @"Code128";
+        case kBarcodeFormatDataMatrix:
+            return @"DataMatrix";
+        case kBarcodeFormatEan8:
+            return @"Ean8";
+        case kBarcodeFormatEan13:
+            return @"Ean13";
+        case kBarcodeFormatITF:
+            return @"ITF";
+        case kBarcodeFormatMaxiCode:
+            return @"MaxiCode";
+        case kBarcodeFormatPDF417:
+            return @"PDF417";
+        case kBarcodeFormatQRCode:
+            return @"QRCode";
+        case kBarcodeFormatRSS14:
+            return @"RSS14";
+        case kBarcodeFormatRSSExpanded:
+            return @"RSSExpanded";
+        case kBarcodeFormatUPCA:
+            return @"UPCA";
+        case kBarcodeFormatUPCE:
+            return @"UPCE";
+        case kBarcodeFormatUPCEANExtension:
+            return @"UPCEANExtension";
+        default:
+            return @"";
+    }
 }
 
 - (BOOL)ensureDirExistsWithPath:(NSString *)path

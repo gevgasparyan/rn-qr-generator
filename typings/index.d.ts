@@ -34,8 +34,13 @@ export interface QRCodeDetectOptions {
   base64?: string;
 };
 
+export type CodeType = 'Aztec' | 'Codabar' | 'Code39' | 'Code93' | 'Code128' |
+  'DataMatrix' | 'Ean8' | 'Ean13' | 'ITF' | 'MaxiCode' | 'PDF417' | 'QRCode' |
+  'RSS14' | 'RSSExpanded' | 'UPCA' | 'UPCE' | 'UPCEANExtension';
+
 export interface QRCodeScanResult {
   values: Array<string>;
+  type: CodeType;
 };
 
 declare namespace RNQRGenerator {

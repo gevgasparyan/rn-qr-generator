@@ -41,8 +41,13 @@ export type QRCodeDetectOptions = {
   base64?: string,
 };
 
+export type CodeType = 'Aztec' | 'Codabar' | 'Code39' | 'Code93' | 'Code128' |
+  'DataMatrix' | 'Ean8' | 'Ean13' | 'ITF' | 'MaxiCode' | 'PDF417' | 'QRCode' |
+  'RSS14' | 'RSSExpanded' | 'UPCA' | 'UPCE' | 'UPCEANExtension';
+
 export type QRCodeScanResult = {
   values: string[],
+  type: CodeType
 };
 
 export default {

@@ -116,6 +116,24 @@ payload
 |    Property    | Type     | Description  |
 | :------------- | :------: | :----------- |
 | values         | string[]   | Array of detected QR code values. Empty if nothing found.
+| type           | string     | Type of detected code.
+
+The following barcode types are currently supported for decoding:
+
+* UPC-A and UPC-E
+* EAN-8 and EAN-13
+* Code 39
+* Code 93
+* Code 128
+* ITF
+* Codabar
+* RSS-14 (all variants)
+* QR Code
+* Data Matrix
+* Maxicode
+* Aztec ('beta' quality)
+* PDF 417 ('beta' quality)
+
 
 
 ![example](https://user-images.githubusercontent.com/13519034/104821872-50268480-5858-11eb-9e5b-77190f9da71d.gif)
@@ -132,5 +150,7 @@ RNQRGenerator.generate({
 
 More information about totp can be found [here](https://github.com/google/google-authenticator/wiki/Key-Uri-Format).
 
+
+This module uses `Zxing` library for encoding and decoding codes ( [ios](https://github.com/zxingify/zxingify-objc), [Android](https://github.com/journeyapps/zxing-android-embedded)).
 # Note
 Some simulators may not generate qr code properly. Use real device if you get an error.
