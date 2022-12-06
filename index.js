@@ -86,4 +86,13 @@ export default {
       );
     });
   },
+
+  imageChooser: (): Promise<QRCodeScanResult> => {
+    return new Promise((resolve, reject) => {
+      RNQrGenerator.imageChooser(
+        error => reject(error),
+        data => resolve(data),
+      );
+    });
+  },
 };
