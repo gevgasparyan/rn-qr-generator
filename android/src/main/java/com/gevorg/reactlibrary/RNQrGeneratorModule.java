@@ -1,15 +1,24 @@
 
 package com.gevorg.reactlibrary;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -18,8 +27,10 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
@@ -33,7 +44,9 @@ import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import androidx.annotation.Nullable;
+import kotlin.reflect.KCallable;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,18 +55,26 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.UUID;
 
-public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
+import static android.app.Activity.RESULT_OK;
+
+public class RNQrGeneratorModule extends ReactContextBaseJavaModule implements ActivityEventListener {
 
   private final ReactApplicationContext reactContext;
   private final static String SCHEME_CONTENT = "content";
   private final String TAG = "RNQRGenerator";
+  int SELECT_PICTURE = 201;
+  Callback Sn,Fn;
+
 
   public RNQrGeneratorModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
+    this.reactContext.addActivityEventListener(this);
+
   }
 
   @Override
@@ -256,15 +277,22 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
   public static Result scanQRImage(Bitmap bMap) throws Exception {
     int[] intArray = new int[bMap.getWidth()*bMap.getHeight()];
+
+
+
+    String var7 = "FAILURE";
+
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
 
-    LuminanceSource source = new RGBLuminanceSource(bMap.getWidth(), bMap.getHeight(), intArray);
+    RGBLuminanceSource source = new RGBLuminanceSource(bMap.getWidth(), bMap.getHeight(), intArray);
     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-
-    Reader reader = new MultiFormatReader();
+    Hashtable hints = new Hashtable();
+    hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+    hints.put(DecodeHintType.ALSO_INVERTED, Boolean.TRUE);
+    MultiFormatReader reader = new MultiFormatReader();
     try {
-      Result result = reader.decode(bitmap);
+      Result result = reader.decode(bitmap,hints);
       return result;
     } catch (Exception e) {
       Log.e("RNQRGenerator", "Decode Failed:", e);
@@ -290,9 +318,9 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     if (!path.isEmpty()) {
       Uri imageUri = Uri.parse(path);
       sourceImage = loadBitmapFromFile(imageUri);
-      FileOutputStream out = new FileOutputStream(imageUri.getPath());
-      sourceImage.compress(Bitmap.CompressFormat.JPEG, 100, out); //100-best quality
-      out.close();
+//      FileOutputStream out = new FileOutputStream(imageUri.getPath());
+//      sourceImage.compress(Bitmap.CompressFormat.JPEG, 100, out); //100-best quality
+//      out.close();
     } else if (!base64.isEmpty()) {
       sourceImage = convertToBitmap(base64);
     }
@@ -301,11 +329,11 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
   private Bitmap loadBitmapFromFile(Uri imageUri) throws IOException {
     BitmapFactory.Options options = new BitmapFactory.Options();
-    options.inJustDecodeBounds = true;
-    loadBitmap(imageUri, options);
-
-    options.inSampleSize = 1;
-    options.inJustDecodeBounds = false;
+//    options.inJustDecodeBounds = true;
+//    loadBitmap(imageUri, options);
+//
+//    options.inSampleSize = 1;
+//    options.inJustDecodeBounds = false;
     return loadBitmap(imageUri, options);
   }
 
@@ -330,12 +358,63 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       }
     } else {
       ContentResolver cr = this.reactContext.getContentResolver();
-      InputStream input = cr.openInputStream(imageUri);
+      InputStream input =null;
+      input = cr.openInputStream(imageUri);
+
+      BufferedInputStream bis = new BufferedInputStream(input);
+
       if (input != null) {
-        sourceImage = BitmapFactory.decodeStream(input, null, options);
+        sourceImage = BitmapFactory.decodeStream(bis);
         input.close();
       }
     }
     return sourceImage;
   }
+
+  // the Select Image Button is clicked
+  @ReactMethod
+  void imageChooser(@Nullable Callback failureCallback,@Nullable Callback sucessCallback) {
+    Sn= sucessCallback;
+    Fn= failureCallback;
+    // create an instance of the
+    // intent of the type image
+    Intent i = new Intent();
+    i.setType("image/*");
+    i.setAction(Intent.ACTION_GET_CONTENT);
+
+    // pass the constant to compare it
+    // with the returned requestCode
+    getCurrentActivity().startActivityForResult(i,SELECT_PICTURE);
+  }
+
+  // this function is triggered when user
+  // selects the image from the imageChooser
+
+
+  @Override
+  public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+
+    if (resultCode == RESULT_OK) {
+
+      // compare the resultCode with the
+      // SELECT_PICTURE constant
+      if (requestCode == SELECT_PICTURE) {
+        // Get the url of the image from data
+        Uri selectedImageUri = data.getData();
+        if (null != selectedImageUri) {
+          WritableMap options = new WritableNativeMap();
+          options.putString("uri",selectedImageUri.toString());
+          detect(options,Fn,Sn);
+          // update the preview image in the layout
+        }
+      }
+    }
+
+  }
+
+  @Override
+  public void onNewIntent(Intent intent) {
+
+  }
+
 }
