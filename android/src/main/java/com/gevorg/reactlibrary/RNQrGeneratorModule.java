@@ -39,11 +39,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
 
 public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
@@ -75,7 +74,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     Double top = padding.hasKey("top") ? padding.getDouble("top") : 0;
     Double left = padding.hasKey("left") ? padding.getDouble("left") : 0;
     Double bottom = padding.hasKey("bottom") ? padding.getDouble("bottom") : 0;
-    Double right = padding.hasKey("right") ? padding.getDouble("right"):  0;
+    Double right = padding.hasKey("right") ? padding.getDouble("right") : 0;
     width = width - left - right;
     height = height - top - bottom;
     boolean base64 = options.hasKey("base64") ? options.getBoolean("base64") : false;
@@ -86,9 +85,9 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
         int newWidth = bitmap.getWidth() + left.intValue() + right.intValue();
         int newHeight = bitmap.getHeight() + top.intValue() + bottom.intValue();
         Bitmap output = Bitmap.createBitmap(
-                newWidth,
-                newHeight,
-                Bitmap.Config.ARGB_8888
+          newWidth,
+          newHeight,
+          Bitmap.Config.ARGB_8888
         );
 
         Canvas canvas = new Canvas(output);
@@ -125,8 +124,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       } catch (IOException e) {
         failureCallback.invoke(e.getMessage());
       }
-    }
-    catch (WriterException e) {
+    } catch (WriterException e) {
       e.printStackTrace();
       failureCallback.invoke(e.getMessage());
     }
@@ -146,8 +144,10 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
         return;
       }
     }
+    final int MAX_RETRIES = 5;
+
     try {
-      Result result = scanQRImage(bitmap);
+      Result result = tryToScanQrImage(MAX_RETRIES, bitmap);
       BarcodeFormat format = result.getBarcodeFormat();
       String codeType = getCodeType(format);
       onDetectResult(result.getText(), codeType, successCallback);
@@ -155,6 +155,35 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       e.printStackTrace();
       onDetectResult("", "", successCallback);
     }
+
+  }
+
+  private Result tryToScanQrImage(int MAX_RETRIES, Bitmap bitmap) throws Exception {
+    int attemptCounterAndScale = 1;
+
+    do{
+      try {
+        Result result = scanQRImage(scaleBitmap(bitmap,attemptCounterAndScale));
+        return result;
+      } catch (Exception e) {
+        if(attemptCounterAndScale == MAX_RETRIES){
+          throw e;
+        }
+        attemptCounterAndScale++;
+      }
+    }while(attemptCounterAndScale <= MAX_RETRIES);
+
+    throw new Exception();
+  }
+
+  private Bitmap scaleBitmap(Bitmap bitmap, int scale){
+    if(scale == 1 ){
+      return bitmap;
+    }
+    int width = bitmap.getWidth()/scale;
+    int height = bitmap.getHeight()/scale;
+
+    return Bitmap.createScaledBitmap(bitmap,width,height,true);
   }
 
   private void onDetectResult(String result, String type, Callback successCallback) {
@@ -209,6 +238,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
         return "";
     }
   }
+
   public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color, String correctionLevel) throws WriterException {
     /**
      * Allow the zxing engine use the default argument for the margin variable
@@ -255,14 +285,16 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   }
 
   public static Result scanQRImage(Bitmap bMap) throws Exception {
-    int[] intArray = new int[bMap.getWidth()*bMap.getHeight()];
+    int[] intArray = new int[bMap.getWidth() * bMap.getHeight()];
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
 
     LuminanceSource source = new RGBLuminanceSource(bMap.getWidth(), bMap.getHeight(), intArray);
     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
+
     Reader reader = new MultiFormatReader();
+
     try {
       Result result = reader.decode(bitmap);
       return result;
@@ -270,6 +302,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       Log.e("RNQRGenerator", "Decode Failed:", e);
       throw e;
     }
+
   }
 
   public static File ensureDirExists(File dir) throws IOException {
@@ -289,34 +322,42 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     Bitmap sourceImage = null;
     if (!path.isEmpty()) {
       Uri imageUri = Uri.parse(path);
-      sourceImage = loadBitmapFromFile(imageUri);
-      FileOutputStream out = new FileOutputStream(imageUri.getPath());
-      sourceImage.compress(Bitmap.CompressFormat.JPEG, 100, out); //100-best quality
-      out.close();
+      int imageScale = getRightScale(imageUri.getPath());
+      sourceImage = loadBitmapFromFile(imageUri,imageScale);
     } else if (!base64.isEmpty()) {
       sourceImage = convertToBitmap(base64);
     }
-    return  sourceImage;
+    return sourceImage;
   }
 
-  private Bitmap loadBitmapFromFile(Uri imageUri) throws IOException {
+  private Bitmap loadBitmapFromFile(Uri imageUri,int scale) throws IOException {
     BitmapFactory.Options options = new BitmapFactory.Options();
-    options.inJustDecodeBounds = true;
-    loadBitmap(imageUri, options);
+    options.inSampleSize = scale;
 
-    options.inSampleSize = 1;
-    options.inJustDecodeBounds = false;
-    return loadBitmap(imageUri, options);
+    try {
+      return loadBitmap(imageUri,options);
+    } catch (Error e) {
+      throw new IOException("Error loading image file");
+    }
   }
 
+  private int getRightScale(String imagePath){
+    int scale = 1;
+    while (!canBitmapFitInMemory(imagePath, scale)) {
+      scale = scale << 1;
+    }
+    return scale;
+  }
 
   public Bitmap convertToBitmap(String base64Str) throws IllegalArgumentException {
     byte[] decodedBytes = Base64.decode(
-            base64Str.substring(base64Str.indexOf(",")  + 1),
-            Base64.DEFAULT
+      base64Str.substring(base64Str.indexOf(",") + 1),
+      Base64.DEFAULT
     );
     return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
   }
+
+
 
   private Bitmap loadBitmap(Uri imageUri, BitmapFactory.Options options) throws IOException {
     Bitmap sourceImage = null;
@@ -337,5 +378,32 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       }
     }
     return sourceImage;
+  }
+
+
+  private BitmapFactory.Options getBitmapOpts(String url, Boolean decode, int scale) {
+    BitmapFactory.Options opts = new BitmapFactory.Options();
+    opts.inJustDecodeBounds = !decode;
+    opts.inSampleSize = scale;
+    BitmapFactory.decodeFile(url, opts);
+    return opts;
+  }
+
+  private int getBitmapSize(String url, Boolean decode, int scale) {
+    BitmapFactory.Options opts = getBitmapOpts(url, decode, scale);
+    return opts.outHeight * opts.outWidth * 32 / (1024 * 1024 * 8);
+  }
+
+  private boolean canBitmapFitInMemory(String path, int scale) {
+    double availableMemory = availableMemory();
+    availableMemory = availableMemory / 2;
+    long size = getBitmapSize(path, false, scale);
+    return size <= availableMemory;
+  }
+
+  private long availableMemory() {
+    Runtime runtime = Runtime.getRuntime();
+    long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+    return runtime.maxMemory() - usedMemory;
   }
 }
