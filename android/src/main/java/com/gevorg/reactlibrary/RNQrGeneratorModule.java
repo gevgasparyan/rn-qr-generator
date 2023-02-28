@@ -261,6 +261,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       level = ErrorCorrectionLevel.Q;
     }
     hints.put(EncodeHintType.ERROR_CORRECTION, level);
+    hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
     if (marginSize != MARGIN_AUTOMATIC) {
       // We want to generate with a custom margin size
       hints.put(EncodeHintType.MARGIN, marginSize);
