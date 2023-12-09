@@ -20,6 +20,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
@@ -30,6 +31,7 @@ import com.google.zxing.Result;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.multi.qrcode.QRCodeMultiReader;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import androidx.annotation.Nullable;
@@ -40,9 +42,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 
 public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
@@ -147,24 +149,30 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     final int MAX_RETRIES = 5;
 
     try {
-      Result result = tryToScanQrImage(MAX_RETRIES, bitmap);
-      BarcodeFormat format = result.getBarcodeFormat();
+      Result[] results = tryToScanQrImage(MAX_RETRIES, bitmap);
+      BarcodeFormat format = results[0].getBarcodeFormat();
       String codeType = getCodeType(format);
-      onDetectResult(result.getText(), codeType, successCallback);
+      String[] texts = new String[results.length];
+
+      for (int i=0;i<results.length;i++) {
+        texts[i]= results[i].getText();
+      }
+      onDetectResult(texts, codeType, successCallback);
     } catch (Exception e) {
       e.printStackTrace();
-      onDetectResult("", "", successCallback);
+      String[] texts = {};
+      onDetectResult(texts, "", successCallback);
     }
 
   }
 
-  private Result tryToScanQrImage(int MAX_RETRIES, Bitmap bitmap) throws Exception {
+  private Result[] tryToScanQrImage(int MAX_RETRIES, Bitmap bitmap) throws Exception {
     int attemptCounterAndScale = 1;
 
     do{
       try {
-        Result result = scanQRImage(scaleBitmap(bitmap,attemptCounterAndScale));
-        return result;
+        Result[] results = scanQRImage(scaleBitmap(bitmap,attemptCounterAndScale));
+        return results;
       } catch (Exception e) {
         if(attemptCounterAndScale == MAX_RETRIES){
           throw e;
@@ -186,10 +194,10 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     return Bitmap.createScaledBitmap(bitmap,width,height,true);
   }
 
-  private void onDetectResult(String result, String type, Callback successCallback) {
+  private void onDetectResult(String[] results, String type, Callback successCallback) {
     WritableArray values = Arguments.createArray();
-    if (result != "") {
-      values.pushString(result);
+    for (int i=0;i<results.length;i++) {
+      values.pushString(results[i]);
     }
     WritableMap response = Arguments.createMap();
     response.putArray("values", values);
@@ -285,7 +293,7 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     return bitmap;
   }
 
-  public static Result scanQRImage(Bitmap bMap) throws Exception {
+  public static Result[] scanQRImage(Bitmap bMap) throws Exception {
     int[] intArray = new int[bMap.getWidth() * bMap.getHeight()];
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
@@ -293,12 +301,20 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     LuminanceSource source = new RGBLuminanceSource(bMap.getWidth(), bMap.getHeight(), intArray);
     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
-
     Reader reader = new MultiFormatReader();
+    QRCodeMultiReader readerMulti = new QRCodeMultiReader();
+
+    Map<DecodeHintType, Object> hints = new HashMap();
+    hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
 
     try {
-      Result result = reader.decode(bitmap);
-      return result;
+      Result result = reader.decode(bitmap, hints);
+      if (result.getText() != "") {
+        Result [] results = new Result[1];
+        results[0] = result;
+      }
+      Result[] results = readerMulti.decodeMultiple(bitmap, hints);
+      return results;
     } catch (Exception e) {
       Log.e("RNQRGenerator", "Decode Failed:", e);
       throw e;
