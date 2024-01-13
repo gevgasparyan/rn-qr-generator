@@ -28,7 +28,8 @@
     "qr decode",
     "detect QR code",
     "scan QR code",
-    "react-native qrcode generator"
+    "react-native qrcode generator",
+    "detect qr code from image"
   ],
   "author": "Gevorg Gasparyan <gevorg994@gmail.com>",
   "homepage": "https://github.com/gevgasparyan/rn-qr-generator#readme",
