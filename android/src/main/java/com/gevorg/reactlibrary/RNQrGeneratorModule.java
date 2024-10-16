@@ -297,10 +297,18 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   }
 
   public static Result[] scanQRImage(Bitmap _bMap) throws Exception {
+    try {
+      Result[] result = scanBitmap(_bMap);
+      return result;
+    } catch (Exception e) {
+      Log.e("RNQRGenerator", "Decode Failed:", e);
+      Bitmap BWBitmap = createBlackAndWhite(_bMap);
+      Bitmap bMap = invertBitmap(BWBitmap);
+      return scanBitmap(bMap);
+    }
+  }
 
-    Bitmap BWBitmap = createBlackAndWhite(_bMap);
-    Bitmap bMap = invertBitmap(BWBitmap);
-
+  public static Result[] scanBitmap(Bitmap bMap) throws Exception {
     int[] intArray = new int[bMap.getWidth() * bMap.getHeight()];
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
@@ -326,8 +334,8 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       Log.e("RNQRGenerator", "Decode Failed:", e);
       throw e;
     }
-
   }
+
 
   public static Bitmap invertBitmap(Bitmap src)
   {
