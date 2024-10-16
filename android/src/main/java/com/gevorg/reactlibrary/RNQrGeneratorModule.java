@@ -6,6 +6,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
@@ -293,7 +296,11 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     return bitmap;
   }
 
-  public static Result[] scanQRImage(Bitmap bMap) throws Exception {
+  public static Result[] scanQRImage(Bitmap _bMap) throws Exception {
+
+    Bitmap BWBitmap = createBlackAndWhite(_bMap);
+    Bitmap bMap = invertBitmap(BWBitmap);
+
     int[] intArray = new int[bMap.getWidth() * bMap.getHeight()];
     //copy pixel data from the Bitmap into the 'intArray' array
     bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
@@ -320,6 +327,52 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       throw e;
     }
 
+  }
+
+  public static Bitmap invertBitmap(Bitmap src)
+  {
+    int height = src.getHeight();
+    int width = src.getWidth();
+
+    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    Canvas canvas = new Canvas(bitmap);
+    Paint paint = new Paint();
+
+    ColorMatrix matrixGrayscale = new ColorMatrix();
+    matrixGrayscale.setSaturation(0);
+
+    ColorMatrix matrixInvert = new ColorMatrix();
+    matrixInvert.set(new float[]
+            {
+                    -1.0f, 0.0f, 0.0f, 0.0f, 255.0f,
+                    0.0f, -1.0f, 0.0f, 0.0f, 255.0f,
+                    0.0f, 0.0f, -1.0f, 0.0f, 255.0f,
+                    0.0f, 0.0f, 0.0f, 1.0f, 0.0f
+            });
+    matrixInvert.preConcat(matrixGrayscale);
+
+    ColorMatrixColorFilter filter = new ColorMatrixColorFilter(matrixInvert);
+    paint.setColorFilter(filter);
+
+    canvas.drawBitmap(src, 0, 0, paint);
+
+    return bitmap;
+  }
+
+  public static Bitmap createBlackAndWhite(Bitmap src) {
+    int width, height;
+    height = src.getHeight();
+    width = src.getWidth();
+
+    Bitmap bmpGrayscale = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    Canvas c = new Canvas(bmpGrayscale);
+    Paint paint = new Paint();
+    ColorMatrix cm = new ColorMatrix();
+    cm.setSaturation(0);
+    ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
+    paint.setColorFilter(f);
+    c.drawBitmap(src, 0, 0, paint);
+    return bmpGrayscale;
   }
 
   public static File ensureDirExists(File dir) throws IOException {
