@@ -137,6 +137,7 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
     // possible formats, allowed lengths, and the string encoding.
     ZXDecodeHints *hints = [ZXDecodeHints hints];
     [hints setTryHarder:TRUE];
+    [hints addPossibleFormat:kBarcodeFormatQRCode];
 
     ZXMultiFormatReader *reader = [ZXMultiFormatReader reader];
     ZXResult *result = [reader decode:bitmap
