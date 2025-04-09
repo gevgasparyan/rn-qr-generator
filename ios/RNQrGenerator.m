@@ -135,11 +135,9 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
 
     // There are a number of hints we can give to the reader, including
     // possible formats, allowed lengths, and the string encoding.
-    ZXDecodeHints *hints = [ZXDecodeHints hints];
-    [hints setTryHarder:TRUE];
-    [hints addPossibleFormat:kBarcodeFormatQRCode];
 
     ZXMultiFormatReader *reader = [ZXMultiFormatReader reader];
+    ZXDecodeHints *hints = [self createDecodeHints];
     ZXResult *result = [reader decode:bitmap
                                 hints:hints
                                 error:&error];
@@ -187,6 +185,31 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
           RCTLogWarn(@"Required iOS 8 or later");
       }
     }
+}
+
+- (ZXDecodeHints *)createDecodeHints {
+    ZXDecodeHints *hints = [ZXDecodeHints hints];
+    [hints setTryHarder:TRUE];
+
+    [hints addPossibleFormat:kBarcodeFormatAztec];
+    [hints addPossibleFormat:kBarcodeFormatCodabar];
+    [hints addPossibleFormat:kBarcodeFormatCode39];
+    [hints addPossibleFormat:kBarcodeFormatCode93];
+    [hints addPossibleFormat:kBarcodeFormatCode128];
+    [hints addPossibleFormat:kBarcodeFormatDataMatrix];
+    [hints addPossibleFormat:kBarcodeFormatEan8];
+    [hints addPossibleFormat:kBarcodeFormatEan13];
+    [hints addPossibleFormat:kBarcodeFormatITF];
+    [hints addPossibleFormat:kBarcodeFormatMaxiCode];
+    [hints addPossibleFormat:kBarcodeFormatPDF417];
+    [hints addPossibleFormat:kBarcodeFormatQRCode];
+    [hints addPossibleFormat:kBarcodeFormatRSS14];
+    [hints addPossibleFormat:kBarcodeFormatRSSExpanded];
+    [hints addPossibleFormat:kBarcodeFormatUPCA];
+    [hints addPossibleFormat:kBarcodeFormatUPCE];
+    [hints addPossibleFormat:kBarcodeFormatUPCEANExtension];
+
+    return hints;
 }
 
 - (NSString *)generatePathInDirectory:(NSString *)directory fileName:(NSString *)name withExtension:(NSString *)extension
