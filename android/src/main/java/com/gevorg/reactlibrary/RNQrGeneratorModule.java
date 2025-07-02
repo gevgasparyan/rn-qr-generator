@@ -324,11 +324,13 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
 
     try {
       Result result = reader.decode(bitmap, hints);
+      Result[] results;
       if (result.getText() != "") {
-        Result [] results = new Result[1];
+        results = new Result[1];
         results[0] = result;
+      } else {
+        results = readerMulti.decodeMultiple(bitmap, hints);
       }
-      Result[] results = readerMulti.decodeMultiple(bitmap, hints);
       return results;
     } catch (Exception e) {
       Log.e("RNQRGenerator", "Decode Failed:", e);
