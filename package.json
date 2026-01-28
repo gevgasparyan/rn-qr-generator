@@ -1,18 +1,32 @@
 {
   "name": "rn-qr-generator",
-  "version": "1.4.4",
+  "version": "2.0.0",
   "description": "React native QR Code generator / reader",
-  "main": "index.js",
-  "types": "typings/index.d.ts",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/index.d.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
   "files": [
-    "/android",
-    "!/android/build",
-    "/ios",
-    "/*.podspec",
-    "/typings"
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "*.podspec",
+    "!ios/build",
+    "!android/build",
+    "!android/gradle",
+    "!android/gradlew",
+    "!android/gradlew.bat",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "!**/.*"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "typescript": "tsc --noEmit",
+    "prepare": "bob build"
   },
   "keywords": [
     "react-native",
@@ -29,13 +43,24 @@
     "detect QR code",
     "scan QR code",
     "react-native qrcode generator",
-    "detect qr code from image"
+    "detect qr code from image",
+    "turbomodule",
+    "new architecture"
   ],
   "author": "Gevorg Gasparyan <gevorg994@gmail.com>",
   "homepage": "https://github.com/gevgasparyan/rn-qr-generator#readme",
   "license": "MIT",
   "peerDependencies": {
-    "react-native": ">=0.55"
+    "react": "*",
+    "react-native": ">=0.71.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-native": "^0.72.0",
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "react-native-builder-bob": "^0.23.0",
+    "typescript": "^5.0.0"
   },
   "repository": {
     "type": "git",
@@ -43,5 +68,27 @@
   },
   "bugs": {
     "url": "https://github.com/gevgasparyan/rn-qr-generator/issues"
+  },
+  "codegenConfig": {
+    "name": "RNQrGeneratorSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.gevorg.reactlibrary"
+    }
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
   }
 }

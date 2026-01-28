@@ -1,4 +1,3 @@
-
 package com.gevorg.reactlibrary;
 
 import android.content.ContentResolver;
@@ -13,14 +12,17 @@ import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.module.annotations.ReactModule;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -37,8 +39,6 @@ import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.multi.qrcode.QRCodeMultiReader;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
-import androidx.annotation.Nullable;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -49,8 +49,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
+@ReactModule(name = RNQrGeneratorModule.NAME)
+public class RNQrGeneratorModule extends NativeRNQrGeneratorSpec {
 
+  public static final String NAME = "RNQrGenerator";
   private final ReactApplicationContext reactContext;
   private final static String SCHEME_CONTENT = "content";
   private final String TAG = "RNQRGenerator";
@@ -61,12 +63,14 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   }
 
   @Override
+  @NonNull
   public String getName() {
-    return "RNQrGenerator";
+    return NAME;
   }
 
+  @Override
   @ReactMethod
-  public void generate(final ReadableMap options, @Nullable Callback failureCallback, @Nullable Callback successCallback) {
+  public void generate(ReadableMap options, Callback failureCallback, Callback successCallback) {
     String value = options.hasKey("value") ? options.getString("value") : "";
     String fileName = options.hasKey("fileName") ? options.getString("fileName") : null;
     String correctionLevel = options.hasKey("correctionLevel") ? options.getString("correctionLevel") : "H";
@@ -76,10 +80,10 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     int color = options.hasKey("color") ? options.getInt("color") : Color.BLACK;
     ReadableMap padding = options.hasKey("padding") ? options.getMap("padding") : Arguments.createMap();
 
-    Double top = padding.hasKey("top") ? padding.getDouble("top") : 0;
-    Double left = padding.hasKey("left") ? padding.getDouble("left") : 0;
-    Double bottom = padding.hasKey("bottom") ? padding.getDouble("bottom") : 0;
-    Double right = padding.hasKey("right") ? padding.getDouble("right") : 0;
+    Double top = padding != null && padding.hasKey("top") ? padding.getDouble("top") : 0;
+    Double left = padding != null && padding.hasKey("left") ? padding.getDouble("left") : 0;
+    Double bottom = padding != null && padding.hasKey("bottom") ? padding.getDouble("bottom") : 0;
+    Double right = padding != null && padding.hasKey("right") ? padding.getDouble("right") : 0;
     width = width - left - right;
     height = height - top - bottom;
     boolean base64 = options.hasKey("base64") ? options.getBoolean("base64") : false;
@@ -135,15 +139,16 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
     }
   }
 
+  @Override
   @ReactMethod
-  public void detect(final ReadableMap options, @Nullable Callback failureCallback, @Nullable Callback successCallback) {
+  public void detect(ReadableMap options, Callback failureCallback, Callback successCallback) {
     String path = options.hasKey("uri") ? options.getString("uri") : "";
     String base64 = options.hasKey("base64") ? options.getString("base64") : "";
 
     Bitmap bitmap = null;
-    if (path != "" || base64 != "") {
+    if (path != null && !path.isEmpty() || base64 != null && !base64.isEmpty()) {
       try {
-        bitmap = getBitmapFromSource(path, base64);
+        bitmap = getBitmapFromSource(path != null ? path : "", base64 != null ? base64 : "");
       } catch (Exception e) {
         failureCallback.invoke("IMAGE_NOT_FOUND");
         return;
@@ -166,7 +171,6 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
       String[] texts = {};
       onDetectResult(texts, "", successCallback);
     }
-
   }
 
   private Result[] tryToScanQrImage(int MAX_RETRIES, Bitmap bitmap) throws Exception {
@@ -251,30 +255,22 @@ public class RNQrGeneratorModule extends ReactContextBaseJavaModule {
   }
 
   public static Bitmap generateQrCode(String myCodeText, int qrWidth, int qrHeight, int backgroundColor, int color, String correctionLevel) throws WriterException {
-    /**
-     * Allow the zxing engine use the default argument for the margin variable
-     */
     int MARGIN_AUTOMATIC = -1;
-
-    /**
-     * Set no margin to be added to the QR code by the zxing engine
-     */
     int MARGIN_NONE = 0;
     int marginSize = MARGIN_NONE;
 
     Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
     ErrorCorrectionLevel level = ErrorCorrectionLevel.H;
-    if (correctionLevel == "M") {
+    if ("M".equals(correctionLevel)) {
       level = ErrorCorrectionLevel.M;
-    } else if (correctionLevel == "L") {
+    } else if ("L".equals(correctionLevel)) {
       level = ErrorCorrectionLevel.L;
-    } else if (correctionLevel == "Q") {
+    } else if ("Q".equals(correctionLevel)) {
       level = ErrorCorrectionLevel.Q;
     }
     hints.put(EncodeHintType.ERROR_CORRECTION, level);
     hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
     if (marginSize != MARGIN_AUTOMATIC) {
-      // We want to generate with a custom margin size
       hints.put(EncodeHintType.MARGIN, marginSize);
     }
 

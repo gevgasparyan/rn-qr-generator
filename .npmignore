@@ -1,1 +1,28 @@
+# Example app
 example/
+
+# Tests
+__tests__/
+__fixtures__/
+__mocks__/
+
+# Development files
+.idea/
+.vscode/
+.turbo/
+
+# TypeScript source maps
+*.map
+
+# Build artifacts
+*.tsbuildinfo
+
+# iOS build
+ios/build/
+
+# Android build
+android/build/
+android/.gradle/
+
+# IDE
+*.xcworkspacedata
