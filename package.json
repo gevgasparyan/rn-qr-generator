@@ -1,6 +1,6 @@
 {
   "name": "rn-qr-generator",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "React native QR Code generator / reader",
   "main": "index.js",
   "types": "typings/index.d.ts",
