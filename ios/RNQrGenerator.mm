@@ -5,7 +5,7 @@
 #elif __has_include("RCTConvert.h")
 #import "RCTConvert.h"
 #else
-#import "React/RCTConvert.h"   // Required when used as a Pod in a Swift project
+#import "React/RCTConvert.h"
 #endif
 
 #import <UIKit/UIKit.h>
@@ -13,11 +13,17 @@
 
 @implementation RNQrGenerator
 
+RCT_EXPORT_MODULE()
+
 - (dispatch_queue_t)methodQueue
 {
     return dispatch_get_main_queue();
 }
-RCT_EXPORT_MODULE()
+
++ (BOOL)requiresMainQueueSetup
+{
+    return NO;
+}
 
 RCT_EXPORT_METHOD(generate:(NSDictionary *)options
                   failureCallback:(RCTResponseErrorBlock)failureCallback
@@ -46,7 +52,6 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     CIFilter *qrFilter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
     CIFilter *colorFilter = [CIFilter filterWithName:@"CIFalseColor"];
     [qrFilter setValue:stringData forKey:@"inputMessage"];
-      // L M Q H
     [qrFilter setValue:level forKey:@"inputCorrectionLevel"];
 
     CIColor *background = [[CIColor alloc] initWithColor:backgroundColor];
@@ -69,6 +74,7 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     CIContext *context = [CIContext contextWithOptions:nil];
     CGImageRef cgImage = [context createCGImage:qrImage fromRect:[qrImage extent]];
     UIImage *image = [UIImage imageWithCGImage:cgImage];
+    CGImageRelease(cgImage);
     if (insets.top != 0 || insets.left != 0 || insets.bottom != 0 || insets.right != 0) {
       CGFloat width = image.size.width + insets.left + insets.right;
       CGFloat height = image.size.height + insets.top + insets.bottom;
@@ -88,17 +94,17 @@ RCT_EXPORT_METHOD(generate:(NSDictionary *)options
     }
 
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
-    NSData *qrData = UIImagePNGRepresentation(image);
+    NSData *qrImageData = UIImagePNGRepresentation(image);
 
     NSString *directory = [[self cacheDirectoryPath] stringByAppendingPathComponent:@"QRCode"];
     NSString *path = [self generatePathInDirectory:directory fileName:fileName withExtension:@".png"];
-    response[@"uri"] = [self writeImage:qrData toPath:path];
+    response[@"uri"] = [self writeImage:qrImageData toPath:path];
 
     response[@"width"] = @(image.size.width);
     response[@"height"] = @(image.size.height);
 
     if (base64) {
-      response[@"base64"] = [qrData base64EncodedStringWithOptions:0];
+      response[@"base64"] = [qrImageData base64EncodedStringWithOptions:0];
     }
     successCallback(@[response]);
   } else {
@@ -177,49 +183,121 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
 
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
     if (result) {
-      // The coded result as a string. The raw data can be accessed with
-      // result.rawBytes and result.length.
       NSString *contents = result.text;
-
-      // The barcode format, such as a QR code or UPC-A
         ZXBarcodeFormat format = result.barcodeFormat;
         response[@"values"] = @[contents];
         response[@"type"] = [self getCodeType:format];
         successCallback(@[response]);
     } else {
         CIImage* ciImage = [[CIImage alloc] initWithImage:image];
-        NSMutableDictionary* detectorOptions;
+        NSMutableDictionary* detectorOptions = [[NSMutableDictionary alloc] init];
         detectorOptions[CIDetectorAccuracy] = CIDetectorAccuracyHigh;
-      if (@available(iOS 8.0, *)) {
-          CIDetector* qrDetector = [CIDetector detectorOfType:CIDetectorTypeQRCode
-                                                      context:NULL
-                                                      options:options];
-          if ([[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation] == nil) {
-              detectorOptions[CIDetectorImageOrientation] = @1;
-          } else {
-              id orientation = [[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation];
-              detectorOptions[CIDetectorImageOrientation] = orientation;
-          }
+        CIDetector* qrDetector = [CIDetector detectorOfType:CIDetectorTypeQRCode
+                                                    context:NULL
+                                                    options:detectorOptions];
+        if ([[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation] == nil) {
+            detectorOptions[CIDetectorImageOrientation] = @1;
+        } else {
+            id orientation = [[ciImage properties] valueForKey:(NSString*) kCGImagePropertyOrientation];
+            detectorOptions[CIDetectorImageOrientation] = orientation;
+        }
 
-          NSArray * features = [qrDetector featuresInImage:ciImage
-                                        options:detectorOptions];
-          NSMutableArray *rawValues = [NSMutableArray array];
-          [features enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-              [rawValues addObject: [obj messageString]];
-          }];
-          NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
-          response[@"values"] = rawValues;
-          response[@"type"] = @"QRCode";
-          successCallback(@[response]);
-      } else {
-            NSString *errorMessage = @"QRCode iOS 8+ required";
-            NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedString(errorMessage, nil)};
-            NSError *error = [NSError errorWithDomain:@"com.rnqrcode" code:1 userInfo:userInfo];
-            failureCallback(error);
-            RCTLogWarn(@"Required iOS 8 or later");
-      }
+        NSArray * features = [qrDetector featuresInImage:ciImage
+                                      options:detectorOptions];
+        NSMutableArray *rawValues = [NSMutableArray array];
+        [features enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            [rawValues addObject: [obj messageString]];
+        }];
+        NSMutableDictionary *finalResponse = [[NSMutableDictionary alloc] init];
+        finalResponse[@"values"] = rawValues;
+        finalResponse[@"type"] = @"QRCode";
+        successCallback(@[finalResponse]);
     }
 }
+
+#pragma mark - TurboModule Methods
+
+#ifdef RCT_NEW_ARCH_ENABLED
+- (void)generate:(JS::NativeRNQrGenerator::GenerateOptions &)options
+   errorCallback:(RCTResponseSenderBlock)errorCallback
+ successCallback:(RCTResponseSenderBlock)successCallback
+{
+    NSMutableDictionary *opts = [[NSMutableDictionary alloc] init];
+    opts[@"value"] = options.value();
+    if (options.backgroundColor().has_value()) {
+        opts[@"backgroundColor"] = @(options.backgroundColor().value());
+    }
+    if (options.color().has_value()) {
+        opts[@"color"] = @(options.color().value());
+    }
+    if (options.width().has_value()) {
+        opts[@"width"] = @(options.width().value());
+    }
+    if (options.height().has_value()) {
+        opts[@"height"] = @(options.height().value());
+    }
+    if (options.base64().has_value()) {
+        opts[@"base64"] = @(options.base64().value());
+    }
+    
+    NSString *fileName = options.fileName();
+    if (fileName != nil) {
+        opts[@"fileName"] = fileName;
+    }
+    NSString *correctionLevel = options.correctionLevel();
+    if (correctionLevel != nil) {
+        opts[@"correctionLevel"] = correctionLevel;
+    }
+    if (options.padding().has_value()) {
+        NSMutableDictionary *paddingDict = [[NSMutableDictionary alloc] init];
+        auto padding = options.padding().value();
+        if (padding.top().has_value()) {
+            paddingDict[@"top"] = @(padding.top().value());
+        }
+        if (padding.left().has_value()) {
+            paddingDict[@"left"] = @(padding.left().value());
+        }
+        if (padding.bottom().has_value()) {
+            paddingDict[@"bottom"] = @(padding.bottom().value());
+        }
+        if (padding.right().has_value()) {
+            paddingDict[@"right"] = @(padding.right().value());
+        }
+        opts[@"padding"] = paddingDict;
+    }
+
+    [self generate:opts failureCallback:^(NSError *error) {
+        errorCallback(@[error.localizedDescription ?: @"Unknown error"]);
+    } successCallback:successCallback];
+}
+
+- (void)detect:(JS::NativeRNQrGenerator::DetectOptions &)options
+ errorCallback:(RCTResponseSenderBlock)errorCallback
+successCallback:(RCTResponseSenderBlock)successCallback
+{
+    NSMutableDictionary *opts = [[NSMutableDictionary alloc] init];
+    NSString *uri = options.uri();
+    if (uri != nil) {
+        opts[@"uri"] = uri;
+    }
+    NSString *base64 = options.base64();
+    if (base64 != nil) {
+        opts[@"base64"] = base64;
+    }
+
+    [self detect:opts failureCallback:^(NSError *error) {
+        errorCallback(@[error.localizedDescription ?: @"Unknown error"]);
+    } successCallback:successCallback];
+}
+
+- (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
+    (const facebook::react::ObjCTurboModule::InitParams &)params
+{
+    return std::make_shared<facebook::react::NativeRNQrGeneratorSpecJSI>(params);
+}
+#endif
+
+#pragma mark - Helper Methods
 
 - (NSString *)generatePathInDirectory:(NSString *)directory fileName:(NSString *)name withExtension:(NSString *)extension
 {
@@ -404,9 +482,9 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
     NSString *correctionLevel = @"H";
     if ([level isEqualToString:@"L"]) {
         correctionLevel = @"L";
-    } else if ([correctionLevel isEqualToString:@"M"]) {
+    } else if ([level isEqualToString:@"M"]) {
         correctionLevel = @"M";
-    } else if ([correctionLevel isEqualToString:@"Q"]) {
+    } else if ([level isEqualToString:@"Q"]) {
         correctionLevel = @"Q";
     }
     return correctionLevel;
@@ -418,4 +496,5 @@ RCT_EXPORT_METHOD(detect:(NSDictionary *)options
     NSURL *fileURL = [NSURL fileURLWithPath:path];
     return [fileURL absoluteString];
 }
+
 @end
